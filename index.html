@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kartu Hasil Studi (KHS) Magang - Secure Online</title>
+    <title>Kartu Hasil Studi (KHS) Magang - Secure</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -25,7 +25,7 @@
             <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1 font-sans">Nomor Induk Mahasiswa (NIM / NPM)</label>
-                    <input type="text" id="nimInput" placeholder="Contoh: 921357" 
+                    <input type="text" id="nimInput" placeholder="Contoh: 0921357" 
                         class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-sans text-sm">
                 </div>
                 <div>
@@ -38,16 +38,24 @@
                         class="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-sans font-semibold py-2.5 rounded-lg shadow transition duration-200 text-sm">
                         🔒 Buka KHS Saya
                     </button>
+                    <button onclick="toggleModeData()" id="btnMode"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-semibold px-4 py-2.5 rounded-lg shadow transition duration-200 text-xs">
+                        📡 Mode: Offline (Simulasi)
+                    </button>
                 </div>
             </div>
 
-            <!-- URL Apps Script Ditanam Permanen di Sini -->
-            <div class="hidden">
-                <input type="text" id="apiUrlInput" value="https://script.google.com/macros/s/AKfycby7SFPDvjT8Z4OIK8RZfAB6noa5ehkthVhyy3ABsA61RAt2hSGKVrw2kgFokVmYn6c3Bw/exec">
+            <div id="apiConfigBox" class="hidden mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs font-sans space-y-2">
+                <p class="font-semibold text-blue-900">Konfigurasi Google Apps Script URL:</p>
+                <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
+                    class="w-full px-3 py-1.5 border border-blue-300 rounded bg-white text-xs">
+                <p class="text-[11px] text-blue-700">Pastikan URL Apps Script web app sudah benar dan spreadsheet memiliki sheet 'DataMahasiswa' & 'NilaiMagang'.</p>
             </div>
 
             <div id="quickTips" class="text-xs text-slate-500 mt-3 font-sans">
-                💡 <b>Status:</b> Terhubung langsung ke Google Spreadsheet Online.
+                💡 <b>Panduan Google Spreadsheet:</b><br>
+                • <b>DataMahasiswa:</b> Kolom A (NIM), Kolom B (Password), Kolom C (Nama), D (Prodi), E (Strata), F (Semester), G (Periode), H (Pembimbing).<br>
+                • <b>NilaiMagang:</b> Kolom A (NIM), Kolom B (Kode MK), Kolom C (Nama Aspek/Matkul), Kolom D (Nilai Angka).
             </div>
 
             <div id="notifBox" class="hidden mt-3 p-3 rounded-lg text-sm font-sans text-center font-semibold"></div>
@@ -56,13 +64,17 @@
         <!-- Indikator Loading -->
         <div id="loadingState" class="hidden text-center py-12 text-slate-500 font-sans">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mb-2"></div>
-            <p class="text-sm">Menghubungkan ke database Google Sheets...</p>
+            <p class="text-sm">Menghubungkan ke database & memverifikasi password...</p>
         </div>
 
         <!-- Konten KHS Utama -->
         <div id="khsContent" class="hidden">
-            <div class="text-center font-bold text-base sm:text-lg uppercase tracking-wide mb-6 border-b-2 border-black pb-3">
-                Kartu Hasil Studi (KHS) Program Magang
+            <!-- Logo Biro & Header KHS -->
+            <div class="flex flex-col items-center justify-center mb-6 border-b-2 border-black pb-4">
+                <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEicMnWPO8CsZsFXOG8gN04FmHHLzXACl-AXclF_b8Rok-eVLMm9m2QRtIvgV6pB5H1NzWTP9rpcasNPwuI6Czk5uBNf-RjhytEMuzyZQ5xWc4J9BCZCtKDOjhIXe1BAu00Y5wUqaUM1GBGGBzPF8f-PrTmouqQJytYMWIBbNm9H-m6A2a9PheW7S9C-V58y/s799/LOGO%20BIRO%20PSIKOLOGI%20HYUI%20%231.png" alt="Logo Biro Psikologi HYUI" class="h-16 sm:h-20 object-contain mb-3">
+                <div class="text-center font-bold text-base sm:text-lg uppercase tracking-wide">
+                    Kartu Hasil Studi (KHS) Program Magang
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-sm font-bold mb-6">
@@ -87,6 +99,7 @@
                             <th class="border border-black p-2 text-left px-3">Aspek / Kompetensi Magang</th>
                             <th class="border border-black p-2 w-24">Nilai Final</th>
                             <th class="border border-black p-2 w-24">Konversi</th>
+                            <th class="border border-black p-2 w-28">Status</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -97,6 +110,7 @@
                 <div class="space-y-1">
                     <div class="flex gap-4"><span class="w-40 text-slate-600">Rata-rata Nilai Angka</span>: <span id="resRata" class="text-black"></span></div>
                     <div class="flex gap-4"><span class="w-40 text-slate-600">Predikat Akhir</span>: <span id="resPredikat" class="text-blue-700"></span></div>
+                    <div class="flex gap-4"><span class="w-40 text-slate-600">Status Kelulusan</span>: <span id="resStatusKelulusan"></span></div>
                 </div>
                 <div class="no-print mt-4 sm:mt-0 flex gap-2">
                     <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded font-sans text-xs font-semibold flex items-center gap-2 shadow">
@@ -117,12 +131,51 @@
     </div>
 
     <script>
-        function konversiHuruf(nilai) {
-            if (nilai >= 85) return "A";
-            if (nilai >= 75) return "B";
-            if (nilai >= 65) return "C";
-            if (nilai >= 50) return "D";
-            return "E";
+        const databaseMahasiswa = {
+            "0921357": {
+                password: "12345",
+                npm: "0921357",
+                nama: "NUZULA WAHYU FAUZI",
+                prodi: "Psikologi Islam",
+                strata: "S-1",
+                semester: "II (DUA)",
+                periode: "2025/2026",
+                pembimbing: "Deri Cahyono, S.Psi., M.Psi., M.Psi., DMS",
+                komponen: [
+                    { kode: "HYUI 2026-6", nama: "Data Analytic for Psychological Research", nilai: 85 },
+                    { kode: "HYUI 2026-6", nama: "Applied Psychological Theories", nilai: 58 }
+                ]
+            }
+        };
+
+        let useOnlineSheet = false;
+
+        function toggleModeData() {
+            useOnlineSheet = !useOnlineSheet;
+            const btn = document.getElementById('btnMode');
+            const box = document.getElementById('apiConfigBox');
+            if (useOnlineSheet) {
+                btn.className = "bg-blue-600 hover:bg-blue-700 text-white font-sans font-semibold px-4 py-2.5 rounded-lg shadow transition duration-200 text-xs";
+                btn.innerText = "🌐 Mode: Google Sheets API";
+                box.classList.remove('hidden');
+            } else {
+                btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-semibold px-4 py-2.5 rounded-lg shadow transition duration-200 text-xs";
+                btn.innerText = "📡 Mode: Offline (Simulasi)";
+                box.classList.add('hidden');
+            }
+        }
+
+        function getDetailNilai(nilai) {
+            if (nilai >= 85) return { huruf: "A", bobot: 4.00, lulus: true };
+            if (nilai >= 80) return { huruf: "A-", bobot: 3.70, lulus: true };
+            if (nilai >= 75) return { huruf: "B+", bobot: 3.30, lulus: true };
+            if (nilai >= 70) return { huruf: "B", bobot: 3.00, lulus: true };
+            if (nilai >= 65) return { huruf: "B-", bobot: 2.70, lulus: true };
+            if (nilai >= 60) return { huruf: "C+", bobot: 2.30, lulus: true };
+            if (nilai >= 55) return { huruf: "C", bobot: 2.00, lulus: true };
+            if (nilai >= 50) return { huruf: "C-", bobot: 1.70, lulus: false };
+            if (nilai >= 40) return { huruf: "D", bobot: 1.00, lulus: false };
+            return { huruf: "E", bobot: 0.00, lulus: false };
         }
 
         function showNotification(msg, isError = true) {
@@ -142,7 +195,6 @@
             const khsContent = document.getElementById('khsContent');
             const initialState = document.getElementById('initialState');
             const loadingState = document.getElementById('loadingState');
-            const apiUrl = document.getElementById('apiUrlInput').value.trim();
 
             if (!nim || !pass) {
                 showNotification("⚠️ Mohon isi NIM dan Password terlebih dahulu.");
@@ -154,22 +206,50 @@
             khsContent.classList.add('hidden');
             loadingState.classList.remove('hidden');
 
-            fetch(`${apiUrl}?nim=${encodeURIComponent(nim)}&password=${encodeURIComponent(pass)}`)
-                .then(res => res.json())
-                .then(response => {
-                    loadingState.classList.add('hidden');
-                    if (response.success) {
-                        renderKHS(response.data);
-                    } else {
-                        initialState.classList.remove('hidden');
-                        showNotification("⚠️ " + response.message);
-                    }
-                })
-                .catch(err => {
+            if (useOnlineSheet) {
+                const apiUrl = document.getElementById('apiUrlInput').value.trim();
+                if (!apiUrl) {
                     loadingState.classList.add('hidden');
                     initialState.classList.remove('hidden');
-                    showNotification("⚠️ Gagal terhubung ke Google Sheets: " + err);
-                });
+                    showNotification("⚠️ Masukkan URL Web App Google Apps Script terlebih dahulu.");
+                    return;
+                }
+
+                fetch(`${apiUrl}?nim=${encodeURIComponent(nim)}&password=${encodeURIComponent(pass)}`)
+                    .then(res => res.json())
+                    .then(response => {
+                        loadingState.classList.add('hidden');
+                        if (response.success) {
+                            renderKHS(response.data);
+                        } else {
+                            initialState.classList.remove('hidden');
+                            showNotification("⚠️ " + response.message);
+                        }
+                    })
+                    .catch(err => {
+                        loadingState.classList.add('hidden');
+                        initialState.classList.remove('hidden');
+                        showNotification("⚠️ Gagal terhubung ke Google Sheets: " + err);
+                    });
+
+            } else {
+                setTimeout(() => {
+                    loadingState.classList.add('hidden');
+                    const data = databaseMahasiswa[nim];
+
+                    if (data) {
+                        if (data.password === pass) {
+                            renderKHS(data);
+                        } else {
+                            initialState.classList.remove('hidden');
+                            showNotification("⚠️ Password salah untuk NIM tersebut.");
+                        }
+                    } else {
+                        initialState.classList.remove('hidden');
+                        showNotification("⚠️ Nomor Mahasiswa (NIM) tidak ditemukan di database.");
+                    }
+                }, 600);
+            }
         }
 
         function renderKHS(data) {
@@ -186,11 +266,20 @@
             let tbody = document.getElementById('tableBody');
             tbody.innerHTML = "";
             let totalNilai = 0;
+            let semuaLulus = true;
 
             if (data.komponen && data.komponen.length > 0) {
                 data.komponen.forEach((item, index) => {
-                    let huruf = konversiHuruf(item.nilai);
+                    let hasilKonversi = getDetailNilai(item.nilai);
                     totalNilai += Number(item.nilai);
+
+                    if (!hasilKonversi.lulus) {
+                        semuaLulus = false;
+                    }
+
+                    let statusBadge = hasilKonversi.lulus 
+                        ? `<span class="text-emerald-700 font-semibold bg-emerald-50 px-2 py-1 rounded text-xs border border-emerald-200">Lulus</span>` 
+                        : `<span class="text-red-600 font-semibold bg-red-50 px-2 py-1 rounded text-xs border border-red-200">Tidak Lulus</span>`;
 
                     let row = `
                         <tr class="hover:bg-slate-50 text-center">
@@ -198,21 +287,35 @@
                             <td class="border border-black p-2 font-mono font-bold">${item.kode}</td>
                             <td class="border border-black p-2 text-left px-3">${item.nama}</td>
                             <td class="border border-black p-2 font-semibold">${item.nilai}</td>
-                            <td class="border border-black p-2 font-bold text-blue-700">${huruf}</td>
+                            <td class="border border-black p-2 font-bold text-blue-700">${hasilKonversi.huruf}</td>
+                            <td class="border border-black p-2">${statusBadge}</td>
                         </tr>
                     `;
                     tbody.innerHTML += row;
                 });
 
                 let rataRata = (totalNilai / data.komponen.length).toFixed(1);
-                let predikatHuruf = konversiHuruf(rataRata);
+                let predikatHuruf = getDetailNilai(rataRata).huruf;
+
+                let predikatTeks = "Cukup";
+                if (rataRata >= 85) predikatTeks = "Sangat Memuaskan (Cumlaude)";
+                else if (rataRata >= 70) predikatTeks = "Memuaskan";
 
                 document.getElementById('resRata').innerText = `${rataRata} (Konversi: ${predikatHuruf})`;
-                document.getElementById('resPredikat').innerText = predikatHuruf === 'A' ? 'Sangat Memuaskan (Cumlaude)' : predikatHuruf === 'B' ? 'Memuaskan' : 'Cukup';
+                document.getElementById('resPredikat').innerText = predikatTeks;
+
+                const statusEl = document.getElementById('resStatusKelulusan');
+                if (semuaLulus && rataRata >= 55) {
+                    statusEl.innerHTML = `<span class="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">LULUS PROGRAM MAGANG</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="text-red-600 bg-red-50 px-2.5 py-1 rounded border border-red-200">TIDAK LULUS (Terdapat Nilai < C)</span>`;
+                }
+
             } else {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-slate-500">Tidak ada data komponen nilai ditemukan.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-slate-500">Tidak ada data komponen nilai ditemukan.</td></tr>`;
                 document.getElementById('resRata').innerText = "0";
                 document.getElementById('resPredikat').innerText = "-";
+                document.getElementById('resStatusKelulusan').innerText = "-";
             }
         }
 
