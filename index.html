@@ -49,7 +49,7 @@
                 <p class="font-semibold text-blue-900">Konfigurasi Google Apps Script URL:</p>
                 <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" 
                     class="w-full px-3 py-1.5 border border-blue-300 rounded bg-white text-xs">
-                <p class="text-[11px] text-blue-700">Pastikan URL Apps Script web app sudah benar dan spreadsheet memiliki sheet 'DataMahasiswa' & 'NilaiMagang'.</p>
+                <p class="text-[11px] text-blue-700">Pastikan URL Web App Apps Script sudah benar dan spreadsheet memiliki sheet 'DataMahasiswa' & 'NilaiMagang'.</p>
             </div>
 
             <div id="quickTips" class="text-xs text-slate-500 mt-3 font-sans">
@@ -131,6 +131,7 @@
     </div>
 
     <script>
+        // Simulasi database lokal jika mode offline aktif
         const databaseMahasiswa = {
             "0921357": {
                 password: "12345",
@@ -166,16 +167,16 @@
         }
 
         function getDetailNilai(nilai) {
-            if (nilai >= 85) return { huruf: "A", bobot: 4.00, lulus: true };
-            if (nilai >= 80) return { huruf: "A-", bobot: 3.70, lulus: true };
-            if (nilai >= 75) return { huruf: "B+", bobot: 3.30, lulus: true };
-            if (nilai >= 70) return { huruf: "B", bobot: 3.00, lulus: true };
-            if (nilai >= 65) return { huruf: "B-", bobot: 2.70, lulus: true };
-            if (nilai >= 60) return { huruf: "C+", bobot: 2.30, lulus: true };
-            if (nilai >= 55) return { huruf: "C", bobot: 2.00, lulus: true };
-            if (nilai >= 50) return { huruf: "C-", bobot: 1.70, lulus: false };
-            if (nilai >= 40) return { huruf: "D", bobot: 1.00, lulus: false };
-            return { huruf: "E", bobot: 0.00, lulus: false };
+            if (nilai >= 85) return { huruf: "A", lulus: true };
+            if (nilai >= 80) return { huruf: "A-", lulus: true };
+            if (nilai >= 75) return { huruf: "B+", lulus: true };
+            if (nilai >= 70) return { huruf: "B", lulus: true };
+            if (nilai >= 65) return { huruf: "B-", lulus: true };
+            if (nilai >= 60) return { huruf: "C+", lulus: true };
+            if (nilai >= 55) return { huruf: "C", lulus: true };
+            if (nilai >= 50) return { huruf: "C-", lulus: false }; // Di bawah C dinyatakan tidak lulus
+            if (nilai >= 40) return { huruf: "D", lulus: false };
+            return { huruf: "E", lulus: false };
         }
 
         function showNotification(msg, isError = true) {
@@ -215,6 +216,7 @@
                     return;
                 }
 
+                // Mengirim parameter nim dan password sesuai dengan kode Google Apps Script doGet(e) Anda
                 fetch(`${apiUrl}?nim=${encodeURIComponent(nim)}&password=${encodeURIComponent(pass)}`)
                     .then(res => res.json())
                     .then(response => {
@@ -255,13 +257,13 @@
         function renderKHS(data) {
             document.getElementById('khsContent').classList.remove('hidden');
 
-            document.getElementById('resNPM').innerText = data.npm;
-            document.getElementById('resNama').innerText = data.nama;
-            document.getElementById('resProdi').innerText = data.prodi;
-            document.getElementById('resStrata').innerText = data.strata;
-            document.getElementById('resSemester').innerText = data.semester;
-            document.getElementById('resPeriode').innerText = data.periode;
-            document.getElementById('resPembimbing').innerText = data.pembimbing;
+            document.getElementById('resNPM').innerText = data.npm || "-";
+            document.getElementById('resNama').innerText = data.nama || "-";
+            document.getElementById('resProdi').innerText = data.prodi || "-";
+            document.getElementById('resStrata').innerText = data.strata || "-";
+            document.getElementById('resSemester').innerText = data.semester || "-";
+            document.getElementById('resPeriode').innerText = data.periode || "-";
+            document.getElementById('resPembimbing').innerText = data.pembimbing || "-";
 
             let tbody = document.getElementById('tableBody');
             tbody.innerHTML = "";
@@ -270,8 +272,9 @@
 
             if (data.komponen && data.komponen.length > 0) {
                 data.komponen.forEach((item, index) => {
-                    let hasilKonversi = getDetailNilai(item.nilai);
-                    totalNilai += Number(item.nilai);
+                    let nilaiAngka = Number(item.nilai) || 0;
+                    let hasilKonversi = getDetailNilai(nilaiAngka);
+                    totalNilai += nilaiAngka;
 
                     if (!hasilKonversi.lulus) {
                         semuaLulus = false;
@@ -284,9 +287,9 @@
                     let row = `
                         <tr class="hover:bg-slate-50 text-center">
                             <td class="border border-black p-2">${index + 1}</td>
-                            <td class="border border-black p-2 font-mono font-bold">${item.kode}</td>
-                            <td class="border border-black p-2 text-left px-3">${item.nama}</td>
-                            <td class="border border-black p-2 font-semibold">${item.nilai}</td>
+                            <td class="border border-black p-2 font-mono font-bold">${item.kode || '-'}</td>
+                            <td class="border border-black p-2 text-left px-3">${item.nama || '-'}</td>
+                            <td class="border border-black p-2 font-semibold">${nilaiAngka}</td>
                             <td class="border border-black p-2 font-bold text-blue-700">${hasilKonversi.huruf}</td>
                             <td class="border border-black p-2">${statusBadge}</td>
                         </tr>
@@ -315,7 +318,7 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-slate-500">Tidak ada data komponen nilai ditemukan.</td></tr>`;
                 document.getElementById('resRata').innerText = "0";
                 document.getElementById('resPredikat').innerText = "-";
-                document.getElementById('resStatusKelulusan').innerText = "-";
+                document.getElementById('resStatusKelulusan').innerHTML = `<span class="text-red-600 bg-red-50 px-2.5 py-1 rounded border border-red-200">TIDAK LULUS (Data Nilai Kosong)</span>`;
             }
         }
 
